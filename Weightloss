@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calorie Dashboard</title>
+
+https://cdn.jsdelivr.net/npm/chart.jsscript>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    margin:0;
+    padding:15px;
+    background:#f4f7f5;
+}
+
+.card{
+    background:white;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:12px;
+    box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+
+input,button{
+    width:100%;
+    padding:12px;
+    margin-top:8px;
+    box-sizing:border-box;
+}
+
+button{
+    background:#2e7d32;
+    color:white;
+    border:none;
+    border-radius:8px;
+}
+
+.progress{
+    height:20px;
+    background:#ddd;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    background:#4caf50;
+    height:100%;
+    width:0%;
+}
+
+.day{
+    padding:8px;
+    margin:5px 0;
+    border-radius:6px;
+}
+
+.darkgreen{background:#2e7d32;color:white;}
+.lightgreen{background:#8bc34a;}
+.orange{background:#ffb74d;}
+.neutral{background:#e0e0e0;}
+.red{background:#ef5350;color:white;}
+</style>
+</head>
+
+<body>
+
+<h2>Calorie Dashboard</h2>
+
+<div class="card">
+    <input type="date" id="date">
+    <input type="number" id="kcal" placeholder="Dagresultaat kcal">
+    <button onclick="saveDay()">Dag opslaan</button>
+</div>
+
+<div class="card">
+    <h3>Voortgang</h3>
+    <p>Cumulatief tekort: <span id="total">0</span> kcal</p>
+    <p>Resterend: <span id="remaining">40000</span> kcal</p>
+
+    <div class="progress">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+</div>
+
+<div class="card">
+    <canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+    <h3>Dagoverzicht</h3>
+    <div id="days"></div>
+</div>
+
+<script>
+
+const GOAL = 40000;
+
+let data =
+JSON.parse(localStorage.getItem("calorieData") || "{}");
+
+document.getElementById("date").value =
+new Date().toISOString().split("T")[0];
+
+function getColor(value){
+    if(value >= 500) return "darkgreen";
+    if(value >= 250) return "lightgreen";
+    if(value > 0) return "orange";
+    if(value == 0) return "neutral";
+    return "red";
+}
+
+function saveDay(){
+
+    const date =
+    document.getElementById("date").value;
+
+    const kcal =
+    Number(document.getElementById("kcal").value);
+
+    data[date] = kcal;
+
+    localStorage.setItem(
+        "calorieData",
+        JSON.stringify(data)
+    );
+
+    render();
+}
+
+function render(){
+
+    let total = 0;
+
+    let dates =
+    Object.keys(data).sort();
+
+    let cumulative = [];
+
+    dates.forEach(d=>{
+        total += data[d];
+        cumulative.push(total);
+    });
+
+    document.getElementById("total")
+        .innerText = total;
+
+    document.getElementById("remaining")
+        .innerText = Math.max(0,GOAL-total);
+
+    document.getElementById("progressFill")
+        .style.width =
+        Math.min(100,(total/GOAL)*100)+"%";
+
+    document.getElementById("days")
+        .innerHTML =
+        dates.reverse().map(d=>
+        `<div class="day ${getColor(data[d])}">
+        ${d} : ${data[d]} kcal
+        </div>`
+        ).join("");
+
+    if(window.chart){
+        chart.destroy();
+    }
+
+    window.chart =
+    new Chart(
+        document.getElementById("chart"),
+        {
+            type:"line",
+            data:{
+                labels:dates,
+                datasets:[{
+                    label:"Cumulatief tekort",
+                    data:cumulative,
+                    borderColor:"green"
+                }]
+            }
+        }
+    );
+}
+
+render();
+
+</script>
+
+</body>
+</html>
